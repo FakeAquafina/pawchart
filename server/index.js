@@ -193,6 +193,7 @@ async function parseWithOllama(rawText) {
   if (!jsonMatch) throw new Error("No JSON found in Ollama response");
   return JSON.parse(jsonMatch[0]);
 }
+
 // ── Pet Routes ─────────────────────────────────────────────────────────────
 app.get("/api/pets", (req, res) => {
   res.json(db.prepare("SELECT * FROM pets ORDER BY name").all());
