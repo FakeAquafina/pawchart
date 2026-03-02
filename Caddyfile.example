@@ -1,0 +1,49 @@
+# ── PawChart ──────────────────────────────────────────────────────────────
+# Add this block to your existing Caddyfile
+# Replace pawchart.yourdomain.com with your actual subdomain
+# Replace 192.168.1.XXX with your LXC container's LAN IP
+
+pawchart.yourdomain.com {
+    # Proxy all API calls to the Node backend
+    reverse_proxy /api/* 192.168.1.XXX:3456
+
+    # Serve the frontend static files
+    # (if you build the React app and serve it from the same container)
+    reverse_proxy 192.168.1.XXX:3456
+
+    # Optional: restrict access to Tailscale IPs only
+    # (uncomment if you don't want it publicly accessible)
+    # @tailscale {
+    #     remote_ip 100.64.0.0/10
+    # }
+    # handle @tailscale {
+    #     reverse_proxy 192.168.1.XXX:3456
+    # }
+    # respond "Access denied" 403
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000;"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        -Server
+    }
+
+    # Increase body size limit for receipt uploads (default 10MB is fine,
+    # but 25MB gives headroom for large PDFs/photos)
+    request_body {
+        max_size 25MB
+    }
+}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# TAILSCALE-ONLY VARIANT
+# If you want PawChart only accessible via Tailscale (not public internet):
+# Use your Tailscale machine name instead of a public domain.
+# Caddy on Tailscale can auto-provision certs via Tailscale's built-in CA.
+#
+# pawchart.your-tailnet.ts.net {
+#     reverse_proxy 192.168.1.XXX:3456
+# }
+# ──────────────────────────────────────────────────────────────────────────

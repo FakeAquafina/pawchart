@@ -1,0 +1,21 @@
+[Unit]
+Description=PawChart Vet Records API
+After=network.target
+
+[Service]
+Type=simple
+User=pawchart
+WorkingDirectory=/opt/pawchart/server
+ExecStart=/usr/bin/node index.js
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/pawchart/server
+
+[Install]
+WantedBy=multi-user.target
