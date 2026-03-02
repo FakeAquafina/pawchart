@@ -144,41 +144,41 @@ async function extractTextFromFile(filePath, mimeType) {
 
 // ── Ollama: Parse raw OCR text into structured JSON ───────────────────────
 async function parseWithOllama(rawText) {
-  const prompt = `You are a veterinary receipt parser. Extract information from the following OCR text.
-
-Respond with ONLY a valid JSON object. No explanation, no markdown, no code fences. Just the raw JSON.
-
-Required format:
-{
-  "petName": "name of the pet or null",
-  "petType": "dog or cat or other or null",
-  "visitDate": "YYYY-MM-DD format or null",
-  "clinic": "clinic or hospital name or null",
-  "vet": "veterinarian name or null",
-  "services": ["array of services or treatments performed"],
-  "medications": ["array of medications prescribed or dispensed"],
-  "totalCost": "total amount with $ sign or null",
-  "notes": "any diagnoses, findings, or important notes or null"
-}
-
-OCR TEXT:
----
-${rawText}
----
-
-JSON:`;
-
-  const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+  const response = await fetch(`${OLLAMA_URL}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       model: OLLAMA_MODEL,
-      prompt,
       stream: false,
+      format: "json",
       options: {
-        temperature: 0.1,
+        temperature: 0.0,
         num_predict: 512,
       },
+      messages: [
+        {
+          role: "system",
+          content: "You are a JSON extraction API. You only output valid JSON. No explanations, no markdown, no extra text. Only a raw JSON object.",
+        },
+        {
+          role: "user",
+          content: [
+            "Extract veterinary visit information from this OCR text.",
+            "Return ONLY this JSON structure, replacing null with found values:",
+            "",
+            '{"petName":null,"petType":null,"visitDate":null,"clinic":null,"vet":null,"services":[],"medications":[],"totalCost":null,"notes":null}',
+            "",
+            "Rules:",
+            "- petType must be dog, cat, other, or null",
+            "- visitDate must be YYYY-MM-DD format or null",
+            "- services and medications must be arrays of strings",
+            "- totalCost must include the $ sign or be null",
+            "",
+            "OCR TEXT:",
+            rawText,
+          ].join("\n"),
+        },
+      ],
     }),
   });
 
@@ -187,12 +187,12 @@ JSON:`;
   }
 
   const data = await response.json();
-  const cleaned = (data.response || "").replace(/```json|```/g, "").trim();
+  const text = data.message?.content || "";
+  const cleaned = text.replace(/```json|```/g, "").trim();
   const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("No JSON found in Ollama response");
   return JSON.parse(jsonMatch[0]);
 }
-
 // ── Pet Routes ─────────────────────────────────────────────────────────────
 app.get("/api/pets", (req, res) => {
   res.json(db.prepare("SELECT * FROM pets ORDER BY name").all());
